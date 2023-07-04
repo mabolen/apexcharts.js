@@ -179,7 +179,7 @@ export default class TreemapChart {
         })
         if (w.config.plotOptions.treemap.dataLabels.format === 'truncate') {
           fontSize = parseInt(w.config.dataLabels.style.fontSize, 10)
-          formattedText = this.truncateLabels(formattedText, x1, y1, x2, y2)
+          formattedText = this.truncateLabels(formattedText, fontSize, x1, y1, x2, y2)
         }
         let dataLabels = this.helpers.calculateDataLabels({
           text: formattedText,
