@@ -169,7 +169,7 @@ export default class TreemapChart {
           }
         }
 
-        const fontSize = this.getFontSize(r)
+        let fontSize = this.getFontSize(r)
 
         let formattedText = w.config.dataLabels.formatter(this.labels[i][j], {
           value: w.globals.series[i][j],
@@ -178,6 +178,7 @@ export default class TreemapChart {
           w,
         })
         if (w.config.plotOptions.treemap.dataLabels.format === 'truncate') {
+          fontSize = parseInt(w.config.dataLabels.style.fontSize, 10)
           formattedText = this.truncateLabels(formattedText, x1, y1, x2, y2)
         }
         let dataLabels = this.helpers.calculateDataLabels({
@@ -318,13 +319,12 @@ export default class TreemapChart {
   }
 
   // This is an alternative label formatting method that uses a
-  // consistent font size, and trims the edge of long labels
-  truncateLabels(text, x1, y1, x2, y2) {
-    const fontSize = parseInt(this.w.config.dataLabels.style.fontSize, 10)
+  // consistent font size, and trims the end of long labels
+  truncateLabels(text, fontSize, x1, y1, x2, y2) {
     const graphics = new Graphics(this.ctx)
     const textRect = graphics.getTextRects(text, fontSize)
 
-    // Determine max width based on ideal orientation on text
+    // Determine max width based on ideal orientation of text
     const labelMaxWidth =
       textRect.width + this.w.config.stroke.width + 5 > x2 - x1 &&
       y2 - y1 > x2 - x1
