@@ -601,7 +601,6 @@ type ApexPlotOptions = {
     dataLabels?: {
       format?: 'scale' | 'truncate'
     }
-    truncateLabels?: boolean
     colorScale?: {
       inverse?: boolean
       ranges?: {
