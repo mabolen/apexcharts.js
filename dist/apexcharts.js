@@ -1,5 +1,5 @@
 /*!
- * ApexCharts v3.41.0
+ * ApexCharts v3.41.1
  * (c) 2018-2023 ApexCharts
  * Released under the MIT License.
  */
@@ -446,6 +446,12 @@
       value: function parseNumber(val) {
         if (val === null) return val;
         return parseFloat(val);
+      }
+    }, {
+      key: "stripNumber",
+      value: function stripNumber(num) {
+        var precision = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 2;
+        return parseFloat(num.toPrecision(precision));
       }
     }, {
       key: "randomId",
@@ -3510,7 +3516,8 @@
             brush: {
               enabled: false,
               autoScaleYaxis: true,
-              target: undefined
+              target: undefined,
+              targets: undefined
             },
             stacked: false,
             stackType: 'normal',
@@ -3656,6 +3663,10 @@
               distributed: false,
               reverseNegativeShade: false,
               useFillColorAsStroke: false,
+              dataLabels: {
+                format: 'scale' // scale | truncate
+
+              },
               colorScale: {
                 inverse: false,
                 ranges: [],
@@ -9428,7 +9439,9 @@
 
                 for (var ci = 0; ci < w.globals.series.length; ci++) {
                   if (dataFormat.isFormatXY()) {
-                    columns.push(series[ci].data[i].y);
+                    var _series$ci$data$i;
+
+                    columns.push((_series$ci$data$i = series[ci].data[i]) === null || _series$ci$data$i === void 0 ? void 0 : _series$ci$data$i.y);
                   } else {
                     columns.push(gSeries[ci][i]);
                   }
@@ -10073,7 +10086,7 @@
       var w = this.w;
       this.xaxisLabels = w.globals.labels.slice();
       this.axesUtils = new AxesUtils(ctx);
-      this.isRangeBar = w.globals.seriesRange.length;
+      this.isRangeBar = w.globals.seriesRange.length && w.globals.isBarHorizontal;
 
       if (w.globals.timescaleLabels.length > 0) {
         //  timescaleLabels labels are there
@@ -10503,7 +10516,7 @@
         if (!w.globals.isBarHorizontal || this.isRangeBar) {
           xCount = this.xaxisLabels.length;
 
-          if (this.isRangeBar && w.globals.isBarHorizontal) {
+          if (this.isRangeBar) {
             xCount--;
             yTickAmount = w.globals.labels.length;
 
@@ -10687,7 +10700,7 @@
 
         if (NO_MIN_MAX_PROVIDED && range > 2) {
           while (1) {
-            result.push(val);
+            result.push(Utils$1.stripNumber(val, 7));
             val += stepSize;
 
             if (val > ub) {
@@ -10703,7 +10716,7 @@
         } else {
           result = [];
           var v = yMin;
-          result.push(v);
+          result.push(Utils$1.stripNumber(v, 7));
           var valuesDivider = Math.abs(yMax - yMin) / ticks;
 
           for (var i = 0; i <= ticks; i++) {
@@ -11217,7 +11230,9 @@
             }).length;
           }
 
-          if (gl.labels.length && cnf.xaxis.type !== 'datetime') {
+          if (gl.labels.length && cnf.xaxis.type !== 'datetime' && gl.series.reduce(function (a, c) {
+            return a + c.length;
+          }, 0) !== 0) {
             // the condition cnf.xaxis.type !== 'datetime' fixes #3897 and #3905
             gl.dataPoints = Math.max(gl.dataPoints, gl.labels.length);
           }
@@ -14062,6 +14077,8 @@
         var isLegendInversed = w.config.legend.inverseOrder;
 
         for (var i = isLegendInversed ? legendNames.length - 1 : 0; isLegendInversed ? i >= 0 : i <= legendNames.length - 1; isLegendInversed ? i-- : i++) {
+          var _w$config$legend$labe;
+
           var text = legendFormatter(legendNames[i], {
             seriesIndex: i,
             w: w
@@ -14140,7 +14157,7 @@
           var elLegendText = document.createElement('span');
           elLegendText.classList.add('apexcharts-legend-text');
           elLegendText.innerHTML = Array.isArray(text) ? text.join(' ') : text;
-          var textColor = w.config.legend.labels.useSeriesColors ? w.globals.colors[i] : w.config.legend.labels.colors;
+          var textColor = w.config.legend.labels.useSeriesColors ? w.globals.colors[i] : Array.isArray(w.config.legend.labels.colors) ? (_w$config$legend$labe = w.config.legend.labels.colors) === null || _w$config$legend$labe === void 0 ? void 0 : _w$config$legend$labe[i] : w.config.legend.labels.colors;
 
           if (!textColor) {
             textColor = w.config.chart.foreColor;
@@ -24692,6 +24709,27 @@
           var labelRotatingCenter = graphics.rotateAroundCenter(elText.node);
           elText.node.setAttribute('transform', "rotate(-90 ".concat(labelRotatingCenter.x, " ").concat(labelRotatingCenter.y, ") translate(").concat(textRect.height / 3, ")"));
         }
+      } // This is an alternative label formatting method that uses a
+      // consistent font size, and trims the edge of long labels
+
+    }, {
+      key: "truncateLabels",
+      value: function truncateLabels(text, fontSize, x1, y1, x2, y2) {
+        var graphics = new Graphics(this.ctx);
+        var textRect = graphics.getTextRects(text, fontSize); // Determine max width based on ideal orientation of text
+
+        var labelMaxWidth = textRect.width + this.w.config.stroke.width + 5 > x2 - x1 && y2 - y1 > x2 - x1 ? y2 - y1 : x2 - x1;
+        var truncatedText = graphics.getTextBasedOnMaxWidth({
+          text: text,
+          maxWidth: labelMaxWidth,
+          fontSize: fontSize
+        }); // Return empty label when text has been trimmed for very small rects
+
+        if (text.length !== truncatedText.length && labelMaxWidth / fontSize < 5) {
+          return '';
+        } else {
+          return truncatedText;
+        }
       }
     }, {
       key: "animateTreemap",
@@ -26166,7 +26204,7 @@
 
 
         if (typeof w.config.chart.events.selection !== 'function') {
-          var targets = w.config.chart.brush.targets || [w.config.chart.brush.target]; // retro compatibility with single target option
+          var targets = Array.isArray(w.config.chart.brush.targets) || [w.config.chart.brush.target]; // retro compatibility with single target option
 
           targets.forEach(function (target) {
             var targetChart = ApexCharts.getChartByID(target);
@@ -26374,6 +26412,7 @@
           name: s.name ? s.name : ser && ser.name,
           color: s.color ? s.color : ser && ser.color,
           type: s.type ? s.type : ser && ser.type,
+          group: s.group ? s.group : ser && ser.group,
           data: s.data ? s.data : ser && ser.data
         });
       }
@@ -32602,8 +32641,16 @@
           me.annotations.drawImageAnnos();
           me.annotations.drawTextAnnos();
 
-          if (w.config.grid.position === 'back' && elgrid) {
-            w.globals.dom.elGraphical.add(elgrid.el);
+          if (w.config.grid.position === 'back') {
+            var _elgrid$elGridBorders;
+
+            if (elgrid) {
+              w.globals.dom.elGraphical.add(elgrid.el);
+            }
+
+            if (elgrid !== null && elgrid !== void 0 && (_elgrid$elGridBorders = elgrid.elGridBorders) !== null && _elgrid$elGridBorders !== void 0 && _elgrid$elGridBorders.node) {
+              w.globals.dom.elGraphical.add(elgrid.elGridBorders);
+            }
           }
 
           if (Array.isArray(graphData.elGraph)) {
@@ -32614,12 +32661,16 @@
             w.globals.dom.elGraphical.add(graphData.elGraph);
           }
 
-          if (w.config.grid.position === 'front' && elgrid) {
-            w.globals.dom.elGraphical.add(elgrid.el);
-          }
+          if (w.config.grid.position === 'front') {
+            var _elgrid$elGridBorders2;
 
-          if (elgrid && elgrid.elGridBorders && elgrid.elGridBorders.node) {
-            w.globals.dom.elGraphical.add(elgrid.elGridBorders);
+            if (elgrid) {
+              w.globals.dom.elGraphical.add(elgrid.el);
+            }
+
+            if (elgrid !== null && elgrid !== void 0 && (_elgrid$elGridBorders2 = elgrid.elGridBorders) !== null && _elgrid$elGridBorders2 !== void 0 && _elgrid$elGridBorders2.node) {
+              w.globals.dom.elGraphical.add(elgrid.elGridBorders);
+            }
           }
 
           if (w.config.xaxis.crosshairs.position === 'front') {

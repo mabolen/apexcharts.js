@@ -150,6 +150,7 @@ type ApexChart = {
     enabled?: boolean
     autoScaleYaxis?: boolean
     target?: string
+    targets?: string[]
   }
   id?: string
   group?: string
@@ -598,9 +599,7 @@ type ApexPlotOptions = {
     distributed?: boolean
     reverseNegativeShade?: boolean
     useFillColorAsStroke?: boolean
-    dataLabels?: {
-      format?: 'scale' | 'truncate'
-    }
+    dataLabels?: { format?: 'scale' | 'truncate' }
     colorScale?: {
       inverse?: boolean
       ranges?: {
